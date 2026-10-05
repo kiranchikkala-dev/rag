@@ -1,58 +1,83 @@
-import { z } from "zod";
+import {
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  vector,
+} from "drizzle-orm/pg-core";
 
-const isServer = typeof window === "undefined";
-
-const ENV_HELP =
-  "Set the required variables in `.env.local`. For local dev run `bun run setup`; for cloud Supabase see README.";
-
-function resolveSupabasePublishableKey(): string | undefined {
-  return (
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
-}
-
-const clientSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
+export const notebooks = pgTable("notebooks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").default("Untitled notebook").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at", {
+    withTimezone: true,
+  })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", {
+    withTimezone: true,
+  })
+    .defaultNow()
+    .notNull(),
 });
 
-const serverSchema = z.object({
-  DATABASE_URL: z.string().min(1),
-  OPENROUTER_API_KEY: z.string().min(1).optional(),
+export const sourceTypeEnum = pgEnum("source_type", [
+  "pdf",
+  "text",
+  "url",
+  "image",
+]);
+
+export const sourceStatusEnum = pgEnum("source_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+]);
+
+export const sources = pgTable("sources", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  notebookId: uuid("notebook_id")
+    .notNull()
+    .references(() => notebooks.id, { onDelete: "cascade" }),
+
+  sourceType: sourceTypeEnum("source_type").notNull(),
+  title: text("title").notNull(),
+  status: sourceStatusEnum("status").notNull().default("pending"),
+  storagePath: text("storage_path"),
+  sourceUrl: text("source_url"),
+  originalFilename: text("original_filename"),
+  mimeType: text("mime_type"),
+  sizeBytes: integer("size_bytes"),
+  contentHash: text("content_hash"),
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata"), // e.g., token count, file size, YouTube length
+  createdAt: timestamp("created_at", {
+    withTimezone: true,
+  })
+    .notNull()
+    .defaultNow(),
+
+  updatedAt: timestamp("updated_at", {
+    withTimezone: true,
+  })
+    .notNull()
+    .defaultNow(),
 });
 
-const clientParsed = clientSchema.safeParse({
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: resolveSupabasePublishableKey(),
+export const documentChunks = pgTable("document_chunks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  sourceId: uuid("source_id")
+    .references(() => sources.id, { onDelete: "cascade" })
+    .notNull(),
+  chunkIndex: integer("chunk_index").notNull(),
+  content: text("content").notNull(),
+  metadata: jsonb("metadata"), // e.g., token count, chunk size
+  embedding: vector("embedding", { dimensions: 1536 }).notNull(),
 });
-
-if (!clientParsed.success) {
-  console.error(
-    "❌ Invalid public environment variables:",
-    JSON.stringify(clientParsed.error.format(), null, 2),
-  );
-  throw new Error(`Invalid public environment variables. ${ENV_HELP}`);
-}
-
-let serverData: z.infer<typeof serverSchema> = {
-  DATABASE_URL: process.env.DATABASE_URL ?? "",
-  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY?.trim() || undefined,
-};
-
-if (isServer) {
-  const serverParsed = serverSchema.safeParse(serverData);
-  if (!serverParsed.success) {
-    console.error(
-      "❌ Invalid server environment variables:",
-      JSON.stringify(serverParsed.error.format(), null, 2),
-    );
-    throw new Error(`Invalid server environment variables. ${ENV_HELP}`);
-  }
-  serverData = serverParsed.data;
-}
-
-export const env = {
-  ...clientParsed.data,
-  ...serverData,
-};
+export type Notebook = typeof notebooks.$inferSelect;
+export type Source = typeof sources.$inferSelect;
