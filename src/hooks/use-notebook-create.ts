@@ -8,7 +8,7 @@ export function useNotebookCreate() {
   const createNotebook = useCreateNotebook();
   const router = useRouter();
 
-  const create = async (payload: CreateNotebookPayload = {}) => {
+  const create = async (payload: CreateNotebookPayload = { title: "Untitled notebook" }) => {
     try {
       const res = await createNotebook.mutateAsync(payload);
       if (!res.data) {

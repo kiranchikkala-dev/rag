@@ -1,11 +1,12 @@
-import { AppError } from "@/lib/app-error";
+// import { AppError } from "@/lib/app-error";
 import type { NextRequest } from "next/server";
-import { uploadSourceFile } from "@/lib/sources/source.service";
-import { uploadSourceRequestSchema } from "@/types";
 import { apiError, apiSuccess } from "@/utils/api-route";
+import { uploadSourceFile } from "@/app/lib/sources/source.service";
+import { uploadSourceRequestSchema } from "@/types";
 // import { getAuthenticatedUserOrThrow } from "@/utils/auth-helpers";
 
 export const maxDuration = 600;
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
     const title = formData.get("title");
 
     if (!(file instanceof File)) {
-      throw new AppError("Validation failed: No file provided");
+      throw new Error("Validation failed: No file provided");
     }
 
     const parsedFields = uploadSourceRequestSchema.safeParse({
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
       title: typeof title === "string" && title.trim() ? title : undefined,
     });
     if (!parsedFields.success) {
-      throw new AppError(`Validation failed: ${parsedFields.error.message}`);
+      throw new Error(`Validation failed: ${parsedFields.error.message}`);
     }
 
     const result = await uploadSourceFile(
@@ -34,8 +35,7 @@ export async function POST(request: NextRequest) {
       parsedFields.data.title,
     );
     console.log("🚀 ~ POST ~ result:", result);
-
-    // return apiSuccess(result);
+    return apiSuccess(result);
   } catch (error) {
     return apiError(error, "Failed to upload source");
   }

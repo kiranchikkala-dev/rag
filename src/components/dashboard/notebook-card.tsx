@@ -24,7 +24,7 @@ const NotebookCard = ({ notebook }: { notebook: NotebookListItem }) => {
           </div>
 
           <CardTitle
-            onClick={() => router.push(`/notebook/${notebook?.id}}`)}
+            onClick={() => router.push(`/notebook/${notebook.id}`)}
             className="truncate font-bold text-lg transition-colors group-hover:text-primary"
           >
             {notebook.title}

@@ -1,3 +1,5 @@
+import { AddSourceModalHost } from "@/components/notebook/add-source-modal";
+import { redirect } from "next/navigation";
 import React from "react";
 
 const NotebookPage = async ({
@@ -6,14 +8,16 @@ const NotebookPage = async ({
   params: Promise<{ id: string }>;
 }) => {
   const { id: notebookId } = await params;
+  // Older builds generated notebook links with a trailing `}`. Redirect those
+  // stale URLs so an already-open page cannot submit a malformed notebook ID.
+  const normalizedNotebookId = notebookId.replace(/}+$/, "");
+  if (normalizedNotebookId !== notebookId) {
+    redirect(`/notebook/${normalizedNotebookId}`);
+  }
+
   return (
     <div>
-      <p>
-        Lorem ipsum dolor sit amet, consectetur adipisicing elit. Fuga ipsam
-        vero molestias facere illum suscipit quasi, cumque nostrum possimus
-        quos! Ducimus a voluptatum dolor aliquid quo tempora aperiam ut
-        quisquam!
-      </p>
+      <AddSourceModalHost notebookId={notebookId} />
     </div>
   );
 };

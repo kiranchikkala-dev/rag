@@ -7,8 +7,10 @@ export const useUploadSource = (notebookId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ file, title }: { file: File; title?: string }) =>
-      sourceClient.uploadSource(notebookId, file, title),
+    mutationFn: ({ file, title }: { file: File; title?: string }) => {
+      console.log("🚀 ~ useUploadSource ~ title:", title);
+      return sourceClient.uploadSource(notebookId, file, title);
+    },
     onSuccess: (result) => {
       // handleCreatedSources(
       //   notebookId,

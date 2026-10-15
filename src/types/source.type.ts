@@ -83,5 +83,27 @@ export type SourceListMetadata = Pick<
   | "channelName"
   | "durationSeconds"
 >;
+export type NotebookSourceIngestRef = NotebookSource;
 
-export type NotebookSourceListItem = NotebookSource;
+export type NotebookSourceListItem = {
+  id: string;
+  title: string;
+  type: z.infer<typeof sourceTypeSchema>;
+  metadata: SourceListMetadata | null;
+  isSelected?: boolean;
+  createdAt: string;
+};
+
+export type SourceIngestStatus = z.infer<typeof sourceIngestStatusSchema>;
+export interface EmbedSourceBatchResult {
+  done: boolean;
+  embeddedChunkCount: number;
+  chunksCount: number;
+  ingestStatus: SourceIngestStatus;
+}
+export const optionalSourceTitleSchema = z.string().min(1).optional();
+
+export const uploadSourceRequestSchema = z.object({
+  notebookId: z.string().uuid("Invalid notebook ID format"),
+  title: optionalSourceTitleSchema,
+});

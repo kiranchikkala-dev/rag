@@ -23,36 +23,13 @@ export function apiSuccess<T>(data: T, status = 200): Response {
   return Response.json(body, { status });
 }
 
-// export function apiError(error: unknown, fallbackMessage: string): Response {
-//   let message = fallbackMessage;
-//   let status = 500;
+export function apiError(error: unknown, fallbackMessage: string): Response {
+  const message = error instanceof Error ? error.message : fallbackMessage;
+  const status = message.startsWith("Validation failed:") ? 400 : 500;
 
-//   if (isAppError(error)) {
-//     message = error.message;
-//     status = error.statusCode;
-//   } else if (error instanceof Error) {
-//     if (isSystemErrorMessage(error.message)) {
-//       const friendly = toUserFacingError(error, fallbackMessage);
-//       message = friendly.message;
-//       status = friendly.statusCode;
-//     } else {
-//       message = error.message;
-//       status = resolveApiErrorStatus(message);
-//     }
-//   } else {
-//     const friendly = toUserFacingError(error, fallbackMessage);
-//     message = friendly.message;
-//     status = friendly.statusCode;
-//   }
-
-//   const body: ApiResponse = {
-//     success: false,
-//     data: null,
-//     error: message,
-//   };
-
-//   return Response.json(body, { status });
-// }
+  const body: ApiResponse = { success: false, data: null, error: message };
+  return Response.json(body, { status });
+}
 
 // export async function parseJsonBody<T extends z.ZodType>(
 //   schema: T,
