@@ -23,9 +23,14 @@ export function apiSuccess<T>(data: T, status = 200): Response {
   return Response.json(body, { status });
 }
 
-export function apiError(error: unknown, fallbackMessage: string): Response {
+export function apiError(
+  error: unknown,
+  fallbackMessage: string,
+  statusOverride?: number,
+): Response {
   const message = error instanceof Error ? error.message : fallbackMessage;
-  const status = message.startsWith("Validation failed:") ? 400 : 500;
+  const status =
+    statusOverride ?? (message.startsWith("Validation failed:") ? 400 : 500);
 
   const body: ApiResponse = { success: false, data: null, error: message };
   return Response.json(body, { status });

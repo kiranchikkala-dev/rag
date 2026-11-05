@@ -10,13 +10,15 @@ export const NotebookLeftSidebar = ({
   children: ReactNode;
 }) => {
   return (
-    <div>
+    <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <AppSidebar
         content={<SourcesPanel notebookId={notebookId} />}
         side="left"
       >
-        <SidebarInset className="h-full overflow-hidden">
-          <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <SidebarInset className="h-full min-w-0 overflow-hidden">
+          <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
+            {children}
+          </div>
         </SidebarInset>
       </AppSidebar>
     </div>

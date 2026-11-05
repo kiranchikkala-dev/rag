@@ -1,4 +1,5 @@
 import { AddSourceModalHost } from "@/components/notebook/add-source-modal";
+import { ChatPanel } from "@/components/notebook/chat/chat-panel";
 import { redirect } from "next/navigation";
 import React from "react";
 
@@ -16,7 +17,8 @@ const NotebookPage = async ({
   }
 
   return (
-    <div>
+    <div className="h-full min-h-0 min-w-0 overflow-hidden">
+      <ChatPanel notebookId={notebookId} />
       <AddSourceModalHost notebookId={notebookId} />
     </div>
   );

@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import {
   integer,
   jsonb,
@@ -44,7 +45,7 @@ export const sources = pgTable("sources", {
   notebookId: uuid("notebook_id")
     .notNull()
     .references(() => notebooks.id, { onDelete: "cascade" }),
-
+  extractedText: text("extracted_text"),
   sourceType: sourceTypeEnum("source_type").notNull(),
   title: text("title").notNull(),
   status: sourceStatusEnum("status").notNull().default("pending"),
@@ -68,6 +69,7 @@ export const sources = pgTable("sources", {
     .notNull()
     .defaultNow(),
 });
+export const senderEnum = pgEnum("message_sender", ["user", "assistant"]);
 
 export const documentChunks = pgTable("document_chunks", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -79,5 +81,43 @@ export const documentChunks = pgTable("document_chunks", {
   metadata: jsonb("metadata"), // e.g., token count, chunk size
   embedding: vector("embedding", { dimensions: 1536 }).notNull(),
 });
+
+export const notebookChatMessages = pgTable("notebook_chat_messages", {
+  id: uuid("id").primaryKey(),
+  notebookId: uuid("notebook_id")
+    .references(() => notebooks.id, {
+      onDelete: "cascade",
+    })
+    .notNull(),
+  role: senderEnum("role").notNull(),
+  parts: jsonb("parts").notNull(),
+  metadata: jsonb("metadata"),
+  createAt: timestamp("created_at", { withTimezone: true }),
+});
+
+export const notebookChatMessageRelations = relations(
+  notebookChatMessages,
+  ({ one, many }) => ({
+    notebook: one(notebooks, {
+      fields: [notebookChatMessages.notebookId],
+      references: [notebooks.id],
+    }),
+  }),
+);
+export const sourceRelations = relations(sources, ({ one, many }) => ({
+  notebooks: one(notebooks, {
+    fields: [sources.notebookId],
+    references: [notebooks.id],
+  }),
+  chunks: many(documentChunks),
+}));
+export const documentChunkRelations = relations(documentChunks, ({ one }) => ({
+  sources: one(sources, {
+    fields: [documentChunks.sourceId],
+    references: [sources.id],
+  }),
+}));
+
 export type Notebook = typeof notebooks.$inferSelect;
 export type Source = typeof sources.$inferSelect;
+export type DocumentChunk = typeof documentChunks.$inferSelect;

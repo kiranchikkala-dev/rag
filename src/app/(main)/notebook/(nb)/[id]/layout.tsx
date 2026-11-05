@@ -1,4 +1,5 @@
 import { NotebookLeftSidebar } from "@/components/notebook-sidebars";
+import { ChatPanel } from "@/components/notebook/chat/chat-panel";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import React from "react";
 
@@ -10,7 +11,6 @@ const Layout = async ({
   params: Promise<{ id: string }>;
 }) => {
   const notebookId = await params.then((p) => p.id);
-  console.log("🚀 ~ Layout ~ notebookId:", notebookId);
 
   return (
     <div className="flex h-[calc(100dvh-60px)] w-full flex-col overflow-hidden">
@@ -21,6 +21,7 @@ const Layout = async ({
           </NotebookLeftSidebar>
         </SidebarProvider>
       </SidebarProvider>
+      {/* <ChatPanel notebookId={notebookId} /> */}
     </div>
   );
 };

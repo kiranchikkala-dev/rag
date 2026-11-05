@@ -2,6 +2,7 @@ import "pdf-parse/worker";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PDFParse } from "pdf-parse";
 import { CanvasFactory, getData } from "pdf-parse/worker";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 // import { PDF_FIGURE_UPLOAD_CONCURRENCY } from "@/lib/constants";
 // import type { DocumentIngestUnit } from "@/lib/chunks/ingest-drafts";
 // import { runWithConcurrency } from "@/utils/async/run-with-concurrency";
@@ -9,6 +10,16 @@ import { sanitizeSourceText } from "@/utils/sources/sanitize-source-text";
 import { DocumentIngestUnit } from "@/types/types";
 
 let workerReady = false;
+
+/** Maximum characters per text chunk fed to embeddings. */
+const PDF_CHUNK_SIZE = 1000;
+/** Characters shared between consecutive chunks so context isn't lost at boundaries. */
+const PDF_CHUNK_OVERLAP = 200;
+
+const pdfTextSplitter = new RecursiveCharacterTextSplitter({
+  chunkSize: PDF_CHUNK_SIZE,
+  chunkOverlap: PDF_CHUNK_OVERLAP,
+});
 
 function ensurePdfWorker(): void {
   if (workerReady) {
@@ -84,7 +95,6 @@ export async function extractPdfDocument(
 ): Promise<ExtractPdfDocumentResult> {
   const { includeTitle = false, includeImages = true } = options;
 
-  console.log("🚀 ~ extractPdfDocument ~ buffer:", buffer);
   return withPdfParser(buffer, async (parser) => {
     const textResult = await parser.getText();
     const fullText = sanitizeSourceText(textResult.text);
@@ -108,10 +118,20 @@ export async function extractPdfDocument(
       const pageText = sanitizeSourceText(page.text);
 
       if (pageText) {
-        units.push({
-          kind: "text",
-          page: page.num,
-          content: pageText,
+        // Split each page into overlapping chunks with LangChain
+        // (RecursiveCharacterTextSplitter) instead of one unit per page.
+        const chunks = await pdfTextSplitter.splitText(pageText);
+
+        chunks.forEach((chunk) => {
+          const content = sanitizeSourceText(chunk);
+
+          if (content) {
+            units.push({
+              kind: "text",
+              page: page.num,
+              content,
+            });
+          }
         });
       }
 
@@ -144,79 +164,78 @@ export async function extractPdfDocument(
         typeof metadataTitle === "string" ? metadataTitle.trim() : undefined;
     }
 
-    console.log("🚀 ~ extractPdfDocument ~ units:", units);
     return { units, fullText, title: title || undefined };
   });
 }
 
-// export async function uploadIngestFigureImages(
-//   supabase: SupabaseClient,
-//   userId: string,
-//   sourceId: string,
-//   units: DocumentIngestUnit[],
-// ): Promise<DocumentIngestUnit[]> {
-//   const output: DocumentIngestUnit[] = units.map((unit) => ({
-//     kind: unit.kind,
-//     page: unit.page,
-//     content: unit.content,
-//   }));
+export async function uploadIngestFigureImages(
+  supabase: SupabaseClient,
+  // userId: string,
+  sourceId: string,
+  units: DocumentIngestUnit[],
+): Promise<DocumentIngestUnit[]> {
+  const output: DocumentIngestUnit[] = units.map((unit) => ({
+    kind: unit.kind,
+    page: unit.page,
+    content: unit.content,
+  }));
 
-//   const figureUploads = units
-//     .map((unit, unitIndex) => ({ unit, unitIndex }))
-//     .filter(
-//       (
-//         item,
-//       ): item is {
-//         unit: DocumentIngestUnit & { imageBuffer: Buffer };
-//         unitIndex: number;
-//       } => item.unit.kind === "figure" && !!item.unit.imageBuffer,
-//     );
+  // const figureUploads = units
+  //   .map((unit, unitIndex) => ({ unit, unitIndex }))
+  //   .filter(
+  //     (
+  //       item,
+  //     ): item is {
+  //       unit: DocumentIngestUnit & { imageBuffer: Buffer };
+  //       unitIndex: number;
+  //     } => item.unit.kind === "figure" && !!item.unit.imageBuffer,
+  //   );
 
-//   if (figureUploads.length === 0) {
-//     return output;
-//   }
+  // if (figureUploads.length === 0) {
+  //   return output;
+  // }
 
-//   await runWithConcurrency(
-//     figureUploads,
-//     PDF_FIGURE_UPLOAD_CONCURRENCY,
-//     async ({ unit, unitIndex }, figureIndex) => {
-//       const contentType = unit.imageContentType ?? "image/png";
-//       const extension =
-//         contentType === "image/jpeg"
-//           ? "jpg"
-//           : contentType === "image/gif"
-//             ? "gif"
-//             : contentType === "image/webp"
-//               ? "webp"
-//               : contentType === "image/bmp"
-//                 ? "bmp"
-//                 : "png";
-//       const storagePath = `${userId}/${sourceId}/figures/p${unit.page}-f${figureIndex + 1}.${extension}`;
+  // await runWithConcurrency(
+  //   figureUploads,
+  //   PDF_FIGURE_UPLOAD_CONCURRENCY,
+  //   async ({ unit, unitIndex }, figureIndex) => {
+  //     const contentType = unit.imageContentType ?? "image/png";
+  //     const extension =
+  //       contentType === "image/jpeg"
+  //         ? "jpg"
+  //         : contentType === "image/gif"
+  //           ? "gif"
+  //           : contentType === "image/webp"
+  //             ? "webp"
+  //             : contentType === "image/bmp"
+  //               ? "bmp"
+  //               : "png";
+  //     const storagePath = `${userId}/${sourceId}/figures/p${unit.page}-f${figureIndex + 1}.${extension}`;
 
-//       const { data, error } = await supabase.storage
-//         .from("sources")
-//         .upload(storagePath, unit.imageBuffer, {
-//           cacheControl: "3600",
-//           upsert: true,
-//           contentType,
-//         });
+  //     const { data, error } = await supabase.storage
+  //       .from("sources")
+  //       .upload(storagePath, unit.imageBuffer, {
+  //         cacheControl: "3600",
+  //         upsert: true,
+  //         contentType,
+  //       });
 
-//       if (error) {
-//         throw new Error(`Storage upload failed: ${error.message}`);
-//       }
+  //     if (error) {
+  //       throw new Error(`Storage upload failed: ${error.message}`);
+  //     }
 
-//       const {
-//         data: { publicUrl },
-//       } = supabase.storage.from("sources").getPublicUrl(data.path);
+  //     const {
+  //       data: { publicUrl },
+  //     } = supabase.storage.from("sources").getPublicUrl(data.path);
 
-//       output[unitIndex] = {
-//         kind: "figure",
-//         page: unit.page,
-//         content: unit.content,
-//         imageUrl: publicUrl,
-//       };
-//     },
-//   );
+  //     output[unitIndex] = {
+  //       kind: "figure",
+  //       page: unit.page,
+  //       content: unit.content,
+  //       imageUrl: publicUrl,
+  //     };
+  //   },
+  // );
 
-//   return output;
-// }
+  return output;
+}

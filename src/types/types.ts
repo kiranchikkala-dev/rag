@@ -1,3 +1,6 @@
+import { Source } from "@/db/schema";
+import { SourceMetadata } from "./source.type";
+
 export interface DocumentIngestUnit {
   kind: "text" | "figure";
   page: number;
@@ -20,4 +23,22 @@ export interface DocumentIngestProfile {
     buffer: Buffer,
     extension: string,
   ) => Promise<DocumentExtractResult>;
+}
+export interface SourceIngestCommitInput {
+  notebookId: string;
+  title: string;
+  type: Source["sourceType"];
+  extractedText: string;
+  sourceUrl?: string | null;
+  storagePath?: string | null;
+  metadata?: SourceMetadata;
+  structuredUnits?: DocumentIngestUnit[];
+}
+
+export function resolveSourceTitle(
+  explicitTitle: string | undefined,
+  fallback: string,
+): string {
+  const trimmed = explicitTitle?.trim();
+  return trimmed || fallback;
 }

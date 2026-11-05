@@ -5,7 +5,6 @@ import { desc } from "drizzle-orm";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
-  console.log("🚀 ~ GET ~ request:", request);
   try {
     const notebookRes = await db
       .select({

@@ -72,7 +72,6 @@ export async function listNotebookSources(
     .from(sources)
     .where(eq(sources.notebookId, notebookId))
     .orderBy(sources.createdAt);
-  console.log("🚀 ~ listNotebookSources ~ notebookSources:", notebookSources);
 
   return notebookSources.map((source) => toNotebookSourceListItem(source));
 }
@@ -89,28 +88,9 @@ export async function uploadSourceFile(
   file: File,
   title?: string,
 ) {
-  const { sourceType, extracted } = await ingestUploadedFile({
+  return ingestUploadedFile({
     notebookId,
     file,
     title,
   });
-
-  const [source] = await db
-    .insert(sources)
-    .values({
-      notebookId,
-      sourceType,
-      title: title?.trim() || extracted.title || file.name,
-      status: "completed",
-      originalFilename: file.name,
-      mimeType: file.type || null,
-      sizeBytes: file.size,
-      metadata: {
-        ingestStatus: "ready",
-        totalCharacters: extracted.fullText.length,
-      },
-    })
-    .returning();
-
-  return { source };
 }

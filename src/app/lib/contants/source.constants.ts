@@ -1,0 +1,1 @@
+export const SOURCE_MAX_STORED_TEXT_CHARS = 50_000;

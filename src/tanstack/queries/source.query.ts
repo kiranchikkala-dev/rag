@@ -8,7 +8,6 @@ export const useUploadSource = (notebookId: string) => {
 
   return useMutation({
     mutationFn: ({ file, title }: { file: File; title?: string }) => {
-      console.log("🚀 ~ useUploadSource ~ title:", title);
       return sourceClient.uploadSource(notebookId, file, title);
     },
     onSuccess: (result) => {

@@ -34,7 +34,6 @@ export async function POST(request: NextRequest) {
       file,
       parsedFields.data.title,
     );
-    console.log("🚀 ~ POST ~ result:", result);
     return apiSuccess(result);
   } catch (error) {
     return apiError(error, "Failed to upload source");

@@ -20,6 +20,8 @@ const clientSchema = z.object({
 const serverSchema = z.object({
   DATABASE_URL: z.string().min(1),
   OPENROUTER_API_KEY: z.string().min(1).optional(),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  EMBEDDING_MODEL: z.string().min(1).optional(),
 });
 
 const clientParsed = clientSchema.safeParse({
@@ -38,6 +40,8 @@ if (!clientParsed.success) {
 let serverData: z.infer<typeof serverSchema> = {
   DATABASE_URL: process.env.DATABASE_URL ?? "",
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY?.trim() || undefined,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY?.trim() || undefined,
+  EMBEDDING_MODEL: process.env.EMBEDDING_MODEL?.trim() || undefined,
 };
 
 if (isServer) {
