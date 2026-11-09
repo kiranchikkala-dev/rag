@@ -12,4 +12,17 @@ export const notebookClient = {
     const { data } = await apiClient.post<ApiResponse>("/notebooks", payload);
     return data;
   },
+  updateNotebook: async (id: string, payload: CreateNotebookPayload) => {
+    const { data } = await apiClient.patch<ApiResponse<NotebookListItem>>(
+      `/notebooks?id=${encodeURIComponent(id)}`,
+      payload,
+    );
+    return data;
+  },
+  deleteNotebook: async (id: string) => {
+    const { data } = await apiClient.delete<ApiResponse<NotebookListItem>>(
+      `/notebooks?id=${encodeURIComponent(id)}`,
+    );
+    return data;
+  },
 };

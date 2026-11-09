@@ -17,7 +17,7 @@ const NotebookPage = async ({
   }
 
   return (
-    <div className="h-full min-h-0 min-w-0 overflow-hidden">
+    <div className="h-full min-h-0  w-full overflow-hidden">
       <ChatPanel notebookId={notebookId} />
       <AddSourceModalHost notebookId={notebookId} />
     </div>

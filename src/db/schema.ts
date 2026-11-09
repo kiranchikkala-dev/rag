@@ -83,7 +83,7 @@ export const documentChunks = pgTable("document_chunks", {
 });
 
 export const notebookChatMessages = pgTable("notebook_chat_messages", {
-  id: uuid("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   notebookId: uuid("notebook_id")
     .references(() => notebooks.id, {
       onDelete: "cascade",
@@ -92,7 +92,9 @@ export const notebookChatMessages = pgTable("notebook_chat_messages", {
   role: senderEnum("role").notNull(),
   parts: jsonb("parts").notNull(),
   metadata: jsonb("metadata"),
-  createAt: timestamp("created_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export const notebookChatMessageRelations = relations(

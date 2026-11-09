@@ -9,9 +9,44 @@ import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { retrieveChunks } from "@/app/lib/chat/retrieve-chunks";
 import { rerankChunks } from "@/app/lib/chat/rerank-chunks";
+import {
+  listNotebookChatMessages,
+  saveNotebookChatMessage,
+} from "@/app/lib/chat/chat-messages.service";
 
 const MAX_CONTEXT_CHUNKS = 5;
 const MAX_CONTEXT_CHARACTERS = 12_000;
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id: notebookId } = await params;
+    if (!notebookId?.trim()) {
+      return apiError(
+        new Error("Validation failed: Invalid notebook ID"),
+        "Invalid notebook ID",
+      );
+    }
+
+    const notebook = await db
+      .select({ id: notebooks.id })
+      .from(notebooks)
+      .where(eq(notebooks.id, notebookId))
+      .limit(1);
+
+    if (notebook.length === 0) {
+      return apiError(new Error("Notebook not found"), "Notebook not found", 404);
+    }
+
+    const messages = await listNotebookChatMessages(notebookId);
+    return apiSuccess(messages);
+  } catch (error) {
+    console.error("Chat history error:", error);
+    return apiError(error, "Internal server error");
+  }
+}
 
 export async function POST(
   request: NextRequest,
@@ -79,12 +114,25 @@ export async function POST(
     const rankedChunks = rerankChunks(query, candidates);
     const contextChunks = selectContextChunks(rankedChunks);
 
+    await saveNotebookChatMessage({
+      notebookId,
+      role: "user",
+      content: query,
+    });
+
     if (contextChunks.length === 0) {
-      return apiSuccess({
+      const answer = "I couldn't find relevant passages in this notebook.";
+      await saveNotebookChatMessage({
         notebookId,
-        query,
-        answer: "I couldn't find relevant passages in this notebook.",
-        citations: [],
+        role: "assistant",
+        content: answer,
+      });
+      return new Response(answer, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          "X-Content-Type-Options": "nosniff",
+        },
       });
     }
 
@@ -101,11 +149,22 @@ export async function POST(
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
         try {
+          let answer = "";
           for await (const chunk of modelStream) {
             if (chunk.text) {
+              answer += chunk.text;
               controller.enqueue(encoder.encode(chunk.text));
             }
           }
+          await saveNotebookChatMessage({
+            notebookId,
+            role: "assistant",
+            content: answer,
+            citations: contextChunks.map((chunk, index) => ({
+              label: String(index + 1),
+              source: `${chunk.sourceTitle} (source ${chunk.sourceId}, chunk ${chunk.chunkIndex})`,
+            })),
+          });
           controller.enqueue(encoder.encode(`\n\n${formatCitations(contextChunks)}`));
           controller.close();
         } catch (error) {

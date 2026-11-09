@@ -10,6 +10,7 @@ export type NotebookListItem = z.infer<typeof notebookListItemSchema>;
 
 export const createNotebookSchema = z.object({
   title: z.string().trim().min(1).max(120),
+  description: z.string().optional(),
 });
 
 export type CreateNotebookPayload = z.infer<typeof createNotebookSchema>;
